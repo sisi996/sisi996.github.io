@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<!-- ============================================================
+  房源定价报告生成器 · 教学注释版
+  这是一个「单文件网页」：HTML（结构）+ CSS（样式）+ JS（逻辑）
+  全部写在同一个 index.html 里，浏览器打开就能用，
+  上传到 GitHub Pages 后，全世界都能通过网址访问。
+  ============================================================ -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>房源定价报告生成器</title>
+
+<!-- ==================== CSS 样式区 ====================
+  这一整块 <style> 是「化妆师」：决定页面长什么样（颜色、布局、字体）。
+  想改颜色，就改这里的 --green 等变量；想改布局，就改这里的样式。 -->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* :root 里定义「颜色变量」：整页统一用，改一处全页生效 */
+  :root {
+    --bg: #f4f1ea;      /* 页面背景（米白） */
+    --card: #fffdf8;    /* 卡片背景 */
+    --ink: #2b2b28;     /* 正文文字色（深灰） */
+    --sub: #8a8578;     /* 次要文字色（灰） */
+    --line: #e5dfd2;    /* 边框线色 */
+    --green: #2f5d50;   /* 主色（墨绿） */
+    --green-dk: #23473d;/* 深绿（顶部栏、按钮悬浮） */
+    --green-lt: #e8f0ec;/* 浅绿（标签底） */
+  }
+
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
+
+  /* ---- 顶部导航栏 ---- */
+  .topbar { background: var(--green-dk); color: #f5f1e6; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(35,71,61,.25); }
+  .topbar-inner { max-width: 1180px; margin: 0 auto; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 18px; font-weight: 600; letter-spacing: 1px; }
+  .btn-hist { background: rgba(255,255,255,.12); color: #f5f1e6; border: 1px solid rgba(255,255,255,.3); border-radius: 20px; padding: 7px 18px; font-size: 14px; cursor: pointer; margin-left: 8px; }
+  .btn-hist:hover { background: rgba(255,255,255,.22); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
+  .layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+  /* ---- 左侧：步骤导航 + 表单面板 ---- */
+  .formcol { display: flex; gap: 14px; align-items: flex-start; }
+  .sidenav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .sidenav button {
+    flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 10px; padding: 10px 6px; font-size: 14px; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .sidenav button.active { background: var(--green); border-color: var(--green); color: #fff; }
+  .sidenav .dot { width: 18px; height: 18px; border-radius: 50%; background: #d8d2c2; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .sidenav button.active .dot { background: rgba(255,255,255,.25); }
+  .sidenav .dot.done { background: #b8862e; }  /* 填完的步骤变金色 ✓ */
+
+  /* 电脑宽屏（≥960px）：左右两栏布局 */
+  @media (min-width: 960px) {
+    body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    .topbar { position: static; }
+    .wrap { flex: 1; overflow: hidden; width: 100%; padding-bottom: 20px; }
+    .layout { height: 100%; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: stretch; }
+    .formcol { height: 100%; }
+    .sidenav { flex-direction: column; flex: none; width: 118px; margin-bottom: 0; }
+    .sidenav button { flex: none; padding: 14px 6px; flex-direction: column; gap: 8px; }
+    .panels { flex: 1; height: 100%; overflow-y: auto; padding-right: 4px; }
+    .rail { height: 100%; overflow-y: auto; padding-right: 4px; }
+    .panels::-webkit-scrollbar, .rail::-webkit-scrollbar { width: 8px; }
+    .panels::-webkit-scrollbar-thumb, .rail::-webkit-scrollbar-thumb { background: #d8d2c2; border-radius: 4px; }
+  }
+  .panels { min-width: 0; }
+
+  /* ---- 表单卡片 ---- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: 0 1px 4px rgba(60,50,30,.05); }
+  .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 130px; margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--sub); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 16px; background: #fff; color: var(--ink);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .field input[type=number] { text-align: center; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,93,80,.12); }
+  .hint { font-size: 12px; color: var(--sub); margin-top: 3px; }
+  .checkline { display: flex; align-items: center; gap: 8px; font-size: 15px; cursor: pointer; margin: 4px 0 10px; }
+  .checkline input { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; }
+  .factors { display: flex; gap: 10px; margin-bottom: 12px; }
+  .factors button { flex: 1; padding: 11px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 16px; cursor: pointer; transition: all .15s; }
+  .factors button.sel { background: var(--green); color: #fff; border-color: var(--green); }
+
+  /* ---- 价格标签输入框（回车添加一个价格，像微信里的群成员标签） ---- */
+  .tagbox { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tagbox:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,93,80,.12); }
+  .tag { background: var(--green-lt); color: var(--green-dk); border-radius: 16px; padding: 5px 8px 5px 12px; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .tag b { font-weight: 600; }
+  .tag span { cursor: pointer; color: var(--sub); font-size: 16px; line-height: 1; padding: 0 2px; }
+  .tag span:hover { color: #b03a2e; }
+  .tagbox input { border: none; outline: none; flex: 1; min-width: 90px; font-size: 15px; padding: 5px 4px; background: transparent; }
+
+  /* ---- 右侧：实时计算结果卡片（深绿底） ---- */
+  .calc-card { background: linear-gradient(150deg, #2f5d50, #23473d); color: #f2efe4; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(35,71,61,.3); }
+  .calc-card h2 { font-size: 14px; font-weight: 500; color: rgba(242,239,228,.7); margin-bottom: 12px; letter-spacing: 2px; }
+  .calc-main { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+  .calc-main .big { flex: 1; text-align: center; }
+  .calc-main .big .v { font-size: 24px; font-weight: 700; color: #fff; }
+  .calc-main .big .k { font-size: 12px; color: rgba(242,239,228,.65); margin-top: 2px; }
+  .calc-sub { border-top: 1px solid rgba(255,255,255,.15); padding-top: 10px; }
+  .calc-sub .item { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: rgba(242,239,228,.85); }
+  .calc-sub .item b { color: #fff; font-weight: 600; }
+
+  /* ---- 操作按钮 ---- */
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  button.act { flex: 1; min-width: 110px; padding: 13px; font-size: 16px; border: none; border-radius: 10px; cursor: pointer; transition: all .15s; }
+  .btn-main { background: var(--green); color: #fff; }
+  .btn-main:hover { background: var(--green-dk); }
+  .btn-sub { background: #eee9dc; color: var(--ink); }
+  .btn-sub:hover { background: #e2dcc9; }
+  .btn-copy { background: #b8862e; color: #fff; }
+  .btn-copy:hover { background: #9c7122; }
+  button.act:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ---- 生成的报告（白纸效果） ---- */
+  .paper { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 20px 18px; font-size: 14px; line-height: 1.85; white-space: pre-wrap; box-shadow: 0 2px 6px rgba(60,50,30,.08); margin-bottom: 12px; min-height: 200px; }
+  .paper.placeholder { color: var(--sub); display: flex; align-items: center; justify-content: center; text-align: center; }
+  .result-title { font-size: 14px; color: var(--sub); margin-bottom: 8px; letter-spacing: 1px; }
+
+  /* ---- 历史记录抽屉（右侧滑出） ---- */
+  .drawer-mask { position: fixed; inset: 0; background: rgba(30,30,25,.4); z-index: 90; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .drawer { position: fixed; top: 0; right: -340px; width: 320px; max-width: 88vw; height: 100%; background: var(--card); z-index: 99; transition: right .25s; display: flex; flex-direction: column; box-shadow: -4px 0 16px rgba(0,0,0,.15); }
+  .drawer.open { right: 0; }
+  .drawer-mask.open { opacity: 1; pointer-events: auto; }
+  .drawer-head { padding: 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .drawer-head h3 { font-size: 15px; }
+  .drawer-head button { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--sub); }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 8px 14px; }
+  .hist-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .hist-item .info { flex: 1; cursor: pointer; font-size: 14px; }
+  .hist-item .info:hover { color: var(--green); }
+  .hist-item .info small { color: var(--sub); display: block; font-size: 12px; }
+  .hist-item button { flex: none; min-width: 0; padding: 6px 10px; font-size: 12px; border: none; border-radius: 6px; cursor: pointer; background: #eee9dc; }
+  .empty { color: var(--sub); font-size: 14px; text-align: center; padding: 30px 0; }
+
+  /* ---- 轻提示 toast ---- */
+  .toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: rgba(35,40,35,.85); color: #fff; padding: 10px 22px; border-radius: 22px; font-size: 14px; display: none; z-index: 120; }
+</style>
+</head>
+<body>
+
+<!-- ==================== 页面结构区 ====================
+  下面是「骨架」：先不管样式，只看有哪些东西。
+  顶栏 → 主体（左：步骤导航+表单；右：计算结果+报告）→ 历史抽屉 → 提示 -->
+
+<!-- 顶部栏：标题 + 一键清空 + 历史记录 -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>房源定价报告生成器</h1>
+    <div>
+      <button class="btn-hist" onclick="clearAll()">一键清空</button>
+      <button class="btn-hist" onclick="toggleDrawer(true)">历史记录</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="layout">
+    <div class="formcol">
+      <!-- 左侧步骤导航：4 个标签页，data-tab 用来标记是第几步 -->
+      <nav class="sidenav">
+        <button data-tab="1" class="active" onclick="switchTab(1)"><span class="dot">1</span>房源信息</button>
+        <button data-tab="2" onclick="switchTab(2)"><span class="dot">2</span>成交数据</button>
+        <button data-tab="3" onclick="switchTab(3)"><span class="dot">3</span>挂牌与竞品</button>
+        <button data-tab="4" onclick="switchTab(4)"><span class="dot">4</span>定价</button>
+      </nav>
+
+      <!-- 4 个表单面板，默认只显示第 1 个 -->
+      <div class="panels">
+        <!-- 第 1 步：房源信息 -->
+        <div class="card" data-panel="1">
+          <h2>房源信息</h2>
+          <div class="row">
+            <div class="field"><label>小区名</label><input id="name" placeholder="如：恒高家园" autocomplete="off"></div>
+            <div class="field"><label>面积（平）</label><input id="area" type="number" step="0.01" placeholder="如：77"></div>
+          </div>
+        </div>
+
+        <!-- 第 2 步：成交数据（成交价可以一条条回车添加） -->
+        <div class="card" data-panel="2" style="display:none">
+          <h2>成交数据</h2>
+          <div class="field">
+            <label>成交价（逐条输入，回车添加）</label>
+            <div class="tagbox" id="dealTags">
+              <input id="dealPriceInput" inputmode="decimal" placeholder="输入单价后回车">
+            </div>
+            <div class="hint">支持逗号分隔批量粘贴；自动算均价、条数、区间</div>
+          </div>
+          <div class="row">
+            <div class="field"><label>成交时间段（无则填 无）</label><input id="dealPeriod" placeholder="如：2026年5-7月"></div>
+            <div class="field"><label>成交套数</label><input id="dealCount" type="number"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>成交单价区间-低</label><input id="dealMin" type="number" step="0.01"></div>
+            <div class="field"><label>成交单价区间-高</label><input id="dealMax" type="number" step="0.01"></div>
+          </div>
+        </div>
+
+        <!-- 第 3 步：挂牌与竞品 -->
+        <div class="card" data-panel="3" style="display:none">
+          <h2>挂牌与竞品</h2>
+          <div class="field">
+            <label>挂牌价（逐条输入，回车添加）</label>
+            <div class="tagbox" id="listTags">
+              <input id="listPriceInput" inputmode="decimal" placeholder="输入单价后回车">
+            </div>
+            <div class="hint">自动算挂牌均价和条数</div>
+          </div>
+          <div class="row">
+            <div class="field"><label>小区在售套数（0 为暂无）</label><input id="saleCount" type="number"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>在售单价区间-低</label><input id="saleMin" type="number" step="0.01"></div>
+            <div class="field"><label>在售单价区间-高</label><input id="saleMax" type="number" step="0.01"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>近似面积在售套数（0 为暂无）</label><input id="simCount" type="number"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>近似面积区间-低</label><input id="simMin" type="number" step="0.01"></div>
+            <div class="field"><label>近似面积区间-高</label><input id="simMax" type="number" step="0.01"></div>
+          </div>
+        </div>
+
+        <!-- 第 4 步：定价参数 -->
+        <div class="card" data-panel="4" style="display:none">
+          <h2>定价</h2>
+          <div class="row">
+            <div class="field"><label>建议单价乘数</label><input id="multiplier" type="number" step="0.01" value="1.08">
+              <div class="hint">常规房源建议 1.05-1.08</div>
+            </div>
+            <div class="field"><label>单价定位</label>
+              <select id="level">
+                <option>低位</option>
+                <option selected>中低位</option>
+                <option>中位</option>
+                <option>中高位</option>
+                <option>高位</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field"><label>最终挂牌单价-低</label><input id="finalMin" type="number" step="0.01"></div>
+            <div class="field"><label>最终挂牌单价-高</label><input id="finalMax" type="number" step="0.01"></div>
+          </div>
+          <!-- 勾选后出现「成交价评估系数」按钮 -->
+          <label class="checkline"><input type="checkbox" id="evalOn"> 做成交价格评估</label>
+          <div class="factors" id="evalFactors" style="display:none">
+            <button type="button" data-f="0.98" class="sel" onclick="setFactor(0.98)">0.98</button>
+            <button type="button" data-f="0.95" onclick="setFactor(0.95)">0.95</button>
+            <button type="button" data-f="0.92" onclick="setFactor(0.92)">0.92</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧：实时计算 + 生成报告 -->
+    <div class="rail">
+      <div class="calc-card">
+        <h2>实时计算</h2>
+        <div class="calc-main">
+          <div class="big"><div class="v" id="cBase">—</div><div class="k">成交单价基数</div></div>
+          <div class="big"><div class="v" id="cSug">—</div><div class="k">建议单价</div></div>
+          <div class="big"><div class="v" id="cTotal">—</div><div class="k">测算总价(万)</div></div>
+        </div>
+        <div class="calc-sub">
+          <div class="item"><span>成交均价</span><b id="cDealAvg">—</b></div>
+          <div class="item"><span>挂牌均价</span><b id="cListAvg">—</b></div>
+          <div class="item"><span>最终挂牌总价范围</span><b id="cFinal">—</b></div>
+          <div class="item" id="cEvalRow" style="display:none"><span>预估成交总价</span><b id="cEval">—</b></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="result-title">生成结果（实时）</div>
+        <div class="paper placeholder" id="result">填写左侧内容，报告会实时生成在这里</div>
+        <div class="btns">
+          <button class="act btn-copy" id="btnCopy" onclick="copyReport()">一键复制</button>
+          <button class="act btn-main" onclick="saveRecord(false)">保存</button>
+          <button class="act btn-sub" id="btnUpdate" onclick="saveRecord(true)">更新原记录</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 历史记录抽屉：点顶栏「历史记录」从右侧滑出 -->
+<div class="drawer-mask" id="drawerMask" onclick="toggleDrawer(false)"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3>历史记录（最近30条）</h3>
+    <button onclick="toggleDrawer(false)">×</button>
+  </div>
+  <div class="drawer-body" id="histList"><div class="empty">暂无记录</div></div>
+</div>
+
+<!-- 轻提示 -->
+<div class="toast" id="toast"></div>
+
+<!-- ==================== JS 逻辑区 ====================
+  这一整块 <script> 是「大脑」：负责所有交互和计算。
+  读的时候按注释的章节看，先看思路，再看具体代码。 -->
+<script>
+/* ========== 第 1 节：全局变量和工具函数 ========== */
+const LS_KEY = 'pricingReports'; // 历史记录存浏览器里的「钥匙名」，localStorage 相当于浏览器的本地小仓库
+let loadedId = null;             // 当前载入的是哪条历史记录（更新原记录用）
+let dealArr = [], listArr = [];  // 成交价、挂牌价的数组（用户回车添加的价格都存在这里）
+let evalFactor = 0.98;           // 成交评估系数，默认 0.98（挂牌价×0.98 ≈ 预估成交价）
+
+// 快捷写法：$('name') = document.getElementById('name')，后面写起来更短
+const $ = id => document.getElementById(id);
+// 读数字输入框：能解析成数字就返回数字，否则返回 null（表示没填）
+const num = id => { const v = parseFloat($(id).value); return isNaN(v) ? null : v; };
+// 四舍五入到两位小数
+const round2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+// 数字格式化成两位小数显示
+const fmt = x => round2(x).toFixed(2);
+// 把「1.02, 1.05 1.08」这种文字拆成数字数组（支持逗号、顿号、空格分隔）
+const parsePrices = s => (s || '').split(/[,，、\s]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+
+// 选择「成交评估系数」（0.98 / 0.95 / 0.92），并高亮当前选中的按钮
+function setFactor(f) {
+  evalFactor = f;
+  document.querySelectorAll('.factors button').forEach(b => b.classList.toggle('sel', parseFloat(b.dataset.f) === f));
+  calc();
+}
+
+// 轻提示：屏幕底部弹出小字条，1.8 秒后消失
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 1800);
+}
+
+/* ========== 第 2 节：步骤导航切换 ========== */
+function switchTab(n) {
+  // 点亮对应的导航按钮，显示对应的表单面板，其余隐藏
+  document.querySelectorAll('.sidenav button').forEach(b => b.classList.toggle('active', b.dataset.tab == n));
+  document.querySelectorAll('.panels .card').forEach(c => c.style.display = c.dataset.panel == n ? 'block' : 'none');
+}
+
+// 小体验优化：鼠标滚轮在数字框上滚动时，不改变数值（防止误操作把 77 滚成别的数）
+document.addEventListener('wheel', e => {
+  if (e.target && e.target.type === 'number') e.target.blur();
+}, { passive: true });
+
+/* ========== 第 3 节：价格标签输入 ==========
+   原理：把价格数组 dealArr / listArr 渲染成一排「小标签」，
+   每个标签带一个 × 可以删除；输入框敲回车/逗号就加一个。 */
+function renderTags(arr, boxId, inputId) {
+  const box = $(boxId);
+  box.querySelectorAll('.tag').forEach(t => t.remove()); // 先清掉旧标签
+  const input = $(inputId);
+  arr.forEach((v, i) => {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    const b = document.createElement('b'); b.textContent = v;          // 价格数字
+    const x = document.createElement('span'); x.textContent = '×';     // 删除按钮
+    x.onclick = () => { arr.splice(i, 1); renderTags(arr, boxId, inputId); onPricesChange(boxId); };
+    tag.appendChild(b); tag.appendChild(x);
+    box.insertBefore(tag, input); // 插在输入框前面
+  });
+}
+
+// 把输入框里的文字解析成价格，追加进数组
+function addPrices(inputId, arr, boxId) {
+  const parts = parsePrices($(inputId).value);
+  if (parts.length) {
+    arr.push(...parts);
+    $(inputId).value = '';
+    renderTags(arr, boxId, inputId);
+    onPricesChange(boxId);
+  }
+}
+
+// 给输入框绑定事件：回车/逗号添加；失焦添加；粘贴后自动添加；边输边实时计算
+function bindTagInput(inputId, arr, boxId) {
+  const input = $(inputId);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === '，') { e.preventDefault(); addPrices(inputId, arr, boxId); }
+  });
+  input.addEventListener('blur', () => addPrices(inputId, arr, boxId));
+  input.addEventListener('paste', () => setTimeout(() => addPrices(inputId, arr, boxId), 0));
+  input.addEventListener('input', calc);
+}
+
+// 成交价变化时，自动把「成交套数 / 单价区间低 / 高」填好（不用手动填）
+function onPricesChange(boxId) {
+  if (boxId === 'dealTags') {
+    $('dealCount').value = dealArr.length || '';
+    $('dealMin').value = dealArr.length ? Math.min(...dealArr) : '';
+    $('dealMax').value = dealArr.length ? Math.max(...dealArr) : '';
+  }
+  calc();
+}
+
+// 启动绑定
+bindTagInput('dealPriceInput', dealArr, 'dealTags');
+bindTagInput('listPriceInput', listArr, 'listTags');
+
+// 「做成交价格评估」勾选框：勾上就显示评估系数按钮
+$('evalOn').addEventListener('change', () => {
+  $('evalFactors').style.display = $('evalOn').checked ? 'flex' : 'none';
+  calc();
+});
+
+// 所有普通输入框/下拉框：一有输入就重新计算（实时效果）
+document.querySelectorAll('.field input, .field select').forEach(el => {
+  if (el.id !== 'dealPriceInput' && el.id !== 'listPriceInput') el.addEventListener('input', calc);
+});
+
+// 有效价格 = 已成标签的 + 输入框里正在输入还没回车的（这样输入一半也能预览）
+function getDeals() { return dealArr.concat(parsePrices($('dealPriceInput').value)); }
+function getLists() { return listArr.concat(parsePrices($('listPriceInput').value)); }
+
+/* ========== 第 4 节：实时计算（定价公式在这里！） ==========
+   这是整个工具最核心的部分，你要改定价逻辑就改这里：
+   1. 成交均价 = 所有成交单价 的平均值
+   2. 挂牌均价 = 所有挂牌单价 的平均值
+   3. 成交单价基数 = (成交均价×0.98 + 挂牌均价×0.92) ÷ 2
+      含义：成交数据更可信给 0.98 权重、挂牌数据打 0.92 折参考，
+      两个数取平均作为「市场基数」。
+   4. 建议单价 = 基数 × 建议单价乘数（默认 1.08，即比市场基数高 8%）
+   5. 测算总价 = 建议单价 × 面积
+   6. 最终挂牌总价范围 = 最终挂牌单价低/高 × 面积
+   7. 预估成交总价 = 最终挂牌单价 × 评估系数（0.98/0.95/0.92） */
+function calc() {
+  const deals = getDeals(), lists = getLists();
+  const area = num('area');
+  const mult = num('multiplier');
+
+  const dealAvg = deals.length ? round2(deals.reduce((a, b) => a + b, 0) / deals.length) : null;
+  const listAvg = lists.length ? round2(lists.reduce((a, b) => a + b, 0) / lists.length) : null;
+  $('cDealAvg').textContent = dealAvg ? fmt(dealAvg) + ' 万/平（' + deals.length + '条）' : '—';
+  $('cListAvg').textContent = listAvg ? fmt(listAvg) + ' 万/平（' + lists.length + '条）' : '—';
+
+  const base = (dealAvg && listAvg) ? round2((dealAvg * 0.98 + listAvg * 0.92) / 2) : null;
+  $('cBase').textContent = base ? fmt(base) : '—';
+
+  const sug = (base && mult) ? round2(base * mult) : null;
+  $('cSug').textContent = sug ? fmt(sug) : '—';
+
+  const total = (sug && area) ? round2(sug * area) : null;
+  $('cTotal').textContent = total ? fmt(total) : '—';
+
+  const fMin = num('finalMin'), fMax = num('finalMax');
+  $('cFinal').textContent = (fMin && fMax && area)
+    ? fmt(fMin * area) + ' ~ ' + fmt(fMax * area) + ' 万元' : '—';
+
+  if ($('evalOn').checked && fMin && fMax && area) {
+    const eMin = round2(fMin * evalFactor), eMax = round2(fMax * evalFactor);
+    $('cEval').textContent = fmt(eMin * area) + ' ~ ' + fmt(eMax * area) + ' 万元（' + fmt(eMin) + '~' + fmt(eMax) + ' 万/平）';
+    $('cEvalRow').style.display = 'flex';
+  } else {
+    $('cEvalRow').style.display = 'none';
+  }
+
+  updateSteps();
+  renderResult();
+}
+
+// 左侧步骤圆点：填完哪步，哪步变金色 ✓
+function updateSteps() {
+  const done = [
+    !!$('name').value.trim() && !!num('area'),            // 第1步：小区名+面积
+    getDeals().length > 0,                                // 第2步：至少一条成交价
+    getLists().length > 0 && num('saleCount') !== null && num('simCount') !== null, // 第3步：挂牌价+两个套数
+    !!num('multiplier')                                   // 第4步：有乘数
+  ];
+  done.forEach((ok, i) => {
+    const dot = document.querySelector('.sidenav button[data-tab="' + (i + 1) + '"] .dot');
+    dot.classList.toggle('done', ok);
+    dot.textContent = ok ? '✓' : (i + 1);
+  });
+}
+
+// 把页面上所有输入汇总成一个对象 d，后续保存、生成报告都用它
+function collectData() {
+  return {
+    name: $('name').value.trim(),
+    area: num('area'),
+    dealPrices: getDeals().join(','),
+    dealPeriod: $('dealPeriod').value.trim(),
+    dealCount: num('dealCount'),
+    dealMin: num('dealMin'), dealMax: num('dealMax'),
+    listPrices: getLists().join(','),
+    saleCount: num('saleCount'),
+    saleMin: num('saleMin'), saleMax: num('saleMax'),
+    simCount: num('simCount'),
+    simMin: num('simMin'), simMax: num('simMax'),
+    multiplier: num('multiplier'),
+    level: $('level').value,
+    finalMin: num('finalMin'), finalMax: num('finalMax'),
+    evalOn: $('evalOn').checked,
+    evalFactor: evalFactor
+  };
+}
+
+// 检查还缺哪些必填项，用于提示「还差：xxx」
+function missingFields(d) {
+  const missing = [];
+  if (!d.name) missing.push('小区名');
+  if (!d.area) missing.push('面积');
+  if (!parsePrices(d.dealPrices).length) missing.push('成交价');
+  if (!parsePrices(d.listPrices).length) missing.push('挂牌价');
+  if (!d.multiplier) missing.push('乘数');
+  if (d.saleCount === null) missing.push('小区在售套数');
+  if (d.simCount === null) missing.push('近似面积在售套数');
+  if (d.evalOn && (!d.finalMin || !d.finalMax)) missing.push('最终挂牌单价范围（评估需要）');
+  return missing;
+}
+
+// 生成结果显示区域：缺东西就提示缺什么，齐了就显示完整报告
+function renderResult() {
+  const d = collectData();
+  const missing = missingFields(d);
+  const box = $('result');
+  if (missing.length) {
+    box.classList.add('placeholder');
+    box.textContent = '还差：' + missing.join('、');
+    return;
+  }
+  box.classList.remove('placeholder');
+  box.textContent = buildReport(d);
+}
+
+/* ========== 第 5 节：报告文案生成 ==========
+   这里决定生成出来的报告长什么样、措辞怎么说。
+   想改报告格式（比如加「三、税费建议」），就改 buildReport。 */
+function buildReport(d) {
+  const deals = d.dealPrices ? d.dealPrices.split(',').map(Number) : [];
+  const lists = d.listPrices ? d.listPrices.split(',').map(Number) : [];
+  const dealAvg = round2(deals.reduce((a, b) => a + b, 0) / deals.length);
+  const listAvg = round2(lists.reduce((a, b) => a + b, 0) / lists.length);
+  const base = round2((dealAvg * 0.98 + listAvg * 0.92) / 2);
+  const sug = round2(base * d.multiplier);
+  const total = round2(sug * d.area);
+
+  // 标题：小区名没带「小区」两个字就自动补上
+  const title = '【' + (d.name.endsWith('小区') ? d.name : d.name + '小区') + '房源定价分析报告】';
+
+  // 二、竞品分析段落
+  let compete;
+  if (d.saleCount > 0) {
+    compete = '小区目前在售' + d.saleCount + '套，挂牌单价区间' + fmt(d.saleMin) + '-' + fmt(d.saleMax) + '万/平；\n';
+  } else {
+    compete = '小区目前暂无在售房源；\n';
+  }
+  if (d.simCount > 0) {
+    compete += '近似面积在售' + d.simCount + '套，挂牌单价区间' + fmt(d.simMin) + '-' + fmt(d.simMax) + '万/平。';
+  } else {
+    compete += '近似面积暂无在售房源。';
+  }
+
+  // 三、同类成交市场段落
+  let dealLine;
+  if (d.dealPeriod && d.dealPeriod !== '无') {
+    dealLine = '近期' + d.dealPeriod + '有' + d.dealCount + '套近似面积成交，成交单价区间为' + fmt(d.dealMin) + '-' + fmt(d.dealMax) + '万/平。';
+  } else {
+    dealLine = '近期没有近似面积成交数据。';
+  }
+
+  // 四、最终定价建议段落
+  let finalLine = '';
+  if (d.finalMin && d.finalMax) {
+    finalLine = '\n建议挂牌总价：' + fmt(d.finalMin * d.area) + '~' + fmt(d.finalMax * d.area) +
+      '万元（单价：' + fmt(d.finalMin) + '~' + fmt(d.finalMax) + '万/平）';
+  }
+
+  let evalLine = '';
+  if (d.evalOn && d.finalMin && d.finalMax) {
+    const eMin = round2(d.finalMin * d.evalFactor), eMax = round2(d.finalMax * d.evalFactor);
+    evalLine = '\n预估成交总价：' + fmt(eMin * d.area) + '~' + fmt(eMax * d.area) +
+      '万元（单价：' + fmt(eMin) + '~' + fmt(eMax) + '万/平）';
+  }
+
+  // 把各段落拼成最终报告文字
+  return title + '\n\n' +
+    '一、市场参考数据\n' +
+    '1. 近期成交均价：' + fmt(dealAvg) + '万/平（基于' + deals.length + '条成交数据）\n' +
+    '2. 目前挂牌均价：' + fmt(listAvg) + '万/平（基于' + lists.length + '条挂牌数据）\n' +
+    '3. 成交单价基数：' + fmt(base) + '万/平\n\n' +
+    '二、竞品分析\n' + compete + '\n\n' +
+    '三、同类成交市场\n' + dealLine + '\n\n' +
+    '四、定价建议\n\n' +
+    '1. 公式测算参考：' + fmt(total) + '万元（单价' + fmt(sug) + '万/平），单价定位' + d.level + '\n\n' +
+    '2. 最终定价建议\n' +
+    '结合以上，公式测算的单价在相似竞品中属于' + d.level + '，结合本房源情况，再结合当前市场行情，以及从营销角度综合来看，' +
+    finalLine + evalLine;
+}
+
+/* ========== 第 6 节：一键复制报告 ========== */
+function copyReport() {
+  const d = collectData();
+  const missing = missingFields(d);
+  if (missing.length) { toast('还差：' + missing.join('、')); return; }
+  const text = buildReport(d);
+  const ok = () => {
+    const btn = $('btnCopy');
+    btn.textContent = '✓ 已复制';
+    setTimeout(() => btn.textContent = '一键复制', 1500);
+  };
+  // 优先用新版剪贴板 API，不行就用老方法（选中文本框复制）
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(() => fallbackCopy(text, ok));
+  } else fallbackCopy(text, ok);
+}
+function fallbackCopy(text, ok) {
+  const ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta); ok();
+}
+
+/* ========== 第 7 节：历史记录（存在浏览器 localStorage，最多 30 条） ==========
+   知识点：localStorage 是浏览器自带的「本地小仓库」，
+   关掉页面、关掉电脑数据都还在，存在你自己的浏览器里。 */
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch (e) { return []; }
+}
+function setHistory(list) { localStorage.setItem(LS_KEY, JSON.stringify(list.slice(0, 30))); }
+
+// 保存（isUpdate=false 存新记录；isUpdate=true 更新当前载入的旧记录）
+function saveRecord(isUpdate) {
+  commitPendingInputs(); // 先把输入框里还没回车的价格也收进数组
+  const d = collectData();
+  if (!d.name) { toast('请先填写小区名'); return; }
+  if (isUpdate && !loadedId) { toast('请先从历史记录里载入一条记录'); return; }
+  const missing = missingFields(d);
+  const report = missing.length ? '' : buildReport(d);
+  const list = getHistory();
+
+  if (isUpdate) {
+    const i = list.findIndex(r => r.id === loadedId);
+    if (i >= 0) {
+      list[i] = { id: loadedId, savedAt: new Date().toISOString(), data: d, report };
+      setHistory(list); renderHistory(); toast('已更新原记录'); return;
+    }
+    toast('原记录不存在，已另存为新记录');
+  }
+  list.unshift({ id: Date.now(), savedAt: new Date().toISOString(), data: d, report });
+  setHistory(list); renderHistory(); toast('已保存');
+}
+
+// 把输入框里没回车的价格补进数组（保存前调用，避免漏数据）
+function commitPendingInputs() {
+  addPrices('dealPriceInput', dealArr, 'dealTags');
+  addPrices('listPriceInput', listArr, 'listTags');
+}
+
+// 渲染历史列表
+function renderHistory() {
+  const list = getHistory();
+  const box = $('histList');
+  if (!list.length) { box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
+  box.innerHTML = '';
+  list.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'hist-item';
+    const time = new Date(r.savedAt);
+    const ts = time.getFullYear() + '-' + String(time.getMonth() + 1).padStart(2, '0') + '-' + String(time.getDate()).padStart(2, '0')
+      + ' ' + String(time.getHours()).padStart(2, '0') + ':' + String(time.getMinutes()).padStart(2, '0');
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.innerHTML = (r.data.name || '未命名') + '（' + (r.data.area || '?') + '平）<small>' + ts + '</small>';
+    info.onclick = () => loadRecord(r.id);
+    const btnDel = document.createElement('button');
+    btnDel.textContent = '删除';
+    btnDel.onclick = () => delRecord(r.id);
+    div.appendChild(info); div.appendChild(btnDel);
+    box.appendChild(div);
+  });
+}
+
+// 点击历史记录：把保存的数据填回表单
+function loadRecord(id) {
+  const r = getHistory().find(x => x.id === id);
+  if (!r) return;
+  const d = r.data;
+  $('name').value = d.name || ''; $('area').value = d.area ?? '';
+  dealArr.splice(0, dealArr.length, ...(d.dealPrices ? d.dealPrices.split(',').map(Number) : []));
+  listArr.splice(0, listArr.length, ...(d.listPrices ? d.listPrices.split(',').map(Number) : []));
+  renderTags(dealArr, 'dealTags', 'dealPriceInput');
+  renderTags(listArr, 'listTags', 'listPriceInput');
+  $('dealPeriod').value = d.dealPeriod || '';
+  $('dealCount').value = d.dealCount ?? ''; $('dealMin').value = d.dealMin ?? ''; $('dealMax').value = d.dealMax ?? '';
+  $('saleCount').value = d.saleCount ?? ''; $('saleMin').value = d.saleMin ?? ''; $('saleMax').value = d.saleMax ?? '';
+  $('simCount').value = d.simCount ?? ''; $('simMin').value = d.simMin ?? ''; $('simMax').value = d.simMax ?? '';
+  $('multiplier').value = d.multiplier ?? 1.08; $('level').value = d.level || '中低位';
+  $('finalMin').value = d.finalMin ?? ''; $('finalMax').value = d.finalMax ?? '';
+  $('evalOn').checked = !!d.evalOn;
+  $('evalFactors').style.display = d.evalOn ? 'flex' : 'none';
+  setFactor(d.evalFactor || 0.98);
+  loadedId = id;
+  // 亮起「更新原记录」按钮
+  const btnU = $('btnUpdate');
+  btnU.classList.remove('btn-sub');
+  btnU.classList.add('btn-main');
+  calc();
+  toggleDrawer(false);
+  toast('已载入：' + (d.name || ''));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 删除一条历史记录
+function delRecord(id) {
+  if (!confirm('确定删除这条记录？')) return;
+  setHistory(getHistory().filter(x => x.id !== id));
+  if (loadedId === id) { loadedId = null; resetUpdateBtn(); }
+  renderHistory(); toast('已删除');
+}
+
+function resetUpdateBtn() {
+  const btnU = $('btnUpdate');
+  btnU.classList.remove('btn-main');
+  btnU.classList.add('btn-sub');
+}
+
+// 打开/关闭历史抽屉
+function toggleDrawer(open) {
+  $('drawer').classList.toggle('open', open);
+  $('drawerMask').classList.toggle('open', open);
+}
+
+/* ========== 第 8 节：一键清空 ========== */
+function clearAll() {
+  if (!confirm('确定清空当前填写的所有内容？')) return;
+  ['name', 'area', 'dealPeriod', 'dealCount', 'dealMin', 'dealMax',
+   'saleCount', 'saleMin', 'saleMax', 'simCount', 'simMin', 'simMax',
+   'finalMin', 'finalMax', 'dealPriceInput', 'listPriceInput'].forEach(id => $(id).value = '');
+  $('multiplier').value = 1.08;
+  $('level').value = '中低位';
+  $('evalOn').checked = false;
+  $('evalFactors').style.display = 'none';
+  setFactor(0.98);
+  dealArr.splice(0); listArr.splice(0);
+  renderTags(dealArr, 'dealTags', 'dealPriceInput');
+  renderTags(listArr, 'listTags', 'listPriceInput');
+  loadedId = null;
+  resetUpdateBtn();
+  switchTab(1);
+  calc();
+  toast('已清空');
+}
+
+/* ========== 第 9 节：页面打开时初始化 ==========
+   先渲染历史记录、先算一次（此时都是空的，显示「—」）。 */
+renderHistory();
+calc();
+</script>
+</body>
+</html>
