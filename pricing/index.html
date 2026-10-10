@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ============================================================
-  房源定价报告生成器 · 教学注释版
+  （@邹明煌）房源定价报告生成器 · 莫兰迪改版 · 教学注释
   这是一个「单文件网页」：HTML（结构）+ CSS（样式）+ JS（逻辑）
   全部写在同一个 index.html 里，浏览器打开就能用，
   上传到 GitHub Pages 后，全世界都能通过网址访问。
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>房源定价报告生成器</title>
+<title>（@邹明煌）房源定价报告生成器</title>
 
 <!-- ==================== CSS 样式区 ====================
   这一整块 <style> 是「化妆师」：决定页面长什么样（颜色、布局、字体）。
@@ -19,26 +19,28 @@
 
   /* :root 里定义「颜色变量」：整页统一用，改一处全页生效 */
   :root {
-    --bg: #f4f1ea;      /* 页面背景（米白） */
-    --card: #fffdf8;    /* 卡片背景 */
-    --ink: #2b2b28;     /* 正文文字色（深灰） */
-    --sub: #8a8578;     /* 次要文字色（灰） */
-    --line: #e5dfd2;    /* 边框线色 */
-    --green: #2f5d50;   /* 主色（墨绿） */
-    --green-dk: #23473d;/* 深绿（顶部栏、按钮悬浮） */
-    --green-lt: #e8f0ec;/* 浅绿（标签底） */
+    --bg: #f1ede5;      /* 页面背景（暖米灰） */
+    --card: #fcf9f4;    /* 卡片背景（柔和米白） */
+    --ink: #55514b;     /* 正文文字色（灰棕） */
+    --sub: #97918a;     /* 次要文字色（暖灰） */
+    --line: #e2dccf;    /* 边框线色（浅灰米） */
+    --green: #7e9485;   /* 主色（莫兰迪鼠尾草绿 · 保存/选中态） */
+    --green-dk: #5a6e60;/* 深色（深灰绿 · 顶部栏、计算卡） */
+    --green-lt: #e7ece6;/* 浅色（浅灰绿 · 标签底） */
   }
 
   body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; }
 
   /* ---- 顶部导航栏 ---- */
-  .topbar { background: var(--green-dk); color: #f5f1e6; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(35,71,61,.25); }
-  .topbar-inner { max-width: 1180px; margin: 0 auto; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar { background: var(--green-dk); color: #f5f1e6; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(90,110,96,.3); }
+  .topbar-inner { max-width: 1280px; margin: 0 auto; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
   .topbar h1 { font-size: 18px; font-weight: 600; letter-spacing: 1px; }
   .btn-hist { background: rgba(255,255,255,.12); color: #f5f1e6; border: 1px solid rgba(255,255,255,.3); border-radius: 20px; padding: 7px 18px; font-size: 14px; cursor: pointer; margin-left: 8px; }
   .btn-hist:hover { background: rgba(255,255,255,.22); }
+  .btn-clear { background: rgba(200,118,112,.28); border-color: rgba(255,255,255,.35); }
+  .btn-clear:hover { background: rgba(200,118,112,.42); }
 
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px 60px; }
   .layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
 
   /* ---- 左侧：步骤导航 + 表单面板 ---- */
@@ -52,26 +54,32 @@
   .sidenav button.active { background: var(--green); border-color: var(--green); color: #fff; }
   .sidenav .dot { width: 18px; height: 18px; border-radius: 50%; background: #d8d2c2; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
   .sidenav button.active .dot { background: rgba(255,255,255,.25); }
-  .sidenav .dot.done { background: #b8862e; }  /* 填完的步骤变金色 ✓ */
+  .sidenav .dot.done { background: #7e93b3; }  /* 填完的步骤变雾霾蓝 ✓（与复制按钮同色系） */
 
   /* 电脑宽屏（≥960px）：左右两栏布局 */
   @media (min-width: 960px) {
     body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
     .topbar { position: static; }
     .wrap { flex: 1; overflow: hidden; width: 100%; padding-bottom: 20px; }
-    .layout { height: 100%; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: stretch; }
+    .layout { height: 100%; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: stretch; }
     .formcol { height: 100%; }
-    .sidenav { flex-direction: column; flex: none; width: 118px; margin-bottom: 0; }
-    .sidenav button { flex: none; padding: 14px 6px; flex-direction: column; gap: 8px; }
+    .sidenav { flex-direction: column; flex: none; width: 132px; margin-bottom: 0; }
+    .sidenav button { flex: none; padding: 16px 6px; flex-direction: column; gap: 8px; }
     .panels { flex: 1; height: 100%; overflow-y: auto; padding-right: 4px; }
     .rail { height: 100%; overflow-y: auto; padding-right: 4px; }
     .panels::-webkit-scrollbar, .rail::-webkit-scrollbar { width: 8px; }
-    .panels::-webkit-scrollbar-thumb, .rail::-webkit-scrollbar-thumb { background: #d8d2c2; border-radius: 4px; }
+    .panels::-webkit-scrollbar-thumb, .rail::-webkit-scrollbar-thumb { background: #cfc9be; border-radius: 4px; }
   }
   .panels { min-width: 0; }
 
+  /* 窄屏（手机）：标题和按钮允许换行，避免长名称把顶部栏挤爆 */
+  @media (max-width: 700px) {
+    .topbar h1 { font-size: 15px; letter-spacing: .3px; }
+    .topbar-inner { flex-wrap: wrap; gap: 8px; }
+  }
+
   /* ---- 表单卡片 ---- */
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: 0 1px 4px rgba(60,50,30,.05); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; box-shadow: 0 1px 4px rgba(60,50,30,.05); }
   .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 
   .row { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -82,7 +90,7 @@
     transition: border-color .15s, box-shadow .15s;
   }
   .field input[type=number] { text-align: center; }
-  .field input:focus, .field select:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,93,80,.12); }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(126,148,133,.18); }
   .hint { font-size: 12px; color: var(--sub); margin-top: 3px; }
   .checkline { display: flex; align-items: center; gap: 8px; font-size: 15px; cursor: pointer; margin: 4px 0 10px; }
   .checkline input { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; }
@@ -92,15 +100,15 @@
 
   /* ---- 价格标签输入框（回车添加一个价格，像微信里的群成员标签） ---- */
   .tagbox { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .tagbox:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,93,80,.12); }
+  .tagbox:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(126,148,133,.18); }
   .tag { background: var(--green-lt); color: var(--green-dk); border-radius: 16px; padding: 5px 8px 5px 12px; font-size: 14px; display: flex; align-items: center; gap: 6px; }
   .tag b { font-weight: 600; }
   .tag span { cursor: pointer; color: var(--sub); font-size: 16px; line-height: 1; padding: 0 2px; }
   .tag span:hover { color: #b03a2e; }
   .tagbox input { border: none; outline: none; flex: 1; min-width: 90px; font-size: 15px; padding: 5px 4px; background: transparent; }
 
-  /* ---- 右侧：实时计算结果卡片（深绿底） ---- */
-  .calc-card { background: linear-gradient(150deg, #2f5d50, #23473d); color: #f2efe4; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(35,71,61,.3); }
+  /* ---- 右侧：实时计算结果卡片（深灰绿底） ---- */
+  .calc-card { background: linear-gradient(150deg, #7e9485, #5a6e60); color: #f2efe4; border-radius: 14px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(90,110,96,.35); }
   .calc-card h2 { font-size: 14px; font-weight: 500; color: rgba(242,239,228,.7); margin-bottom: 12px; letter-spacing: 2px; }
   .calc-main { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
   .calc-main .big { flex: 1; text-align: center; }
@@ -115,10 +123,10 @@
   button.act { flex: 1; min-width: 110px; padding: 13px; font-size: 16px; border: none; border-radius: 10px; cursor: pointer; transition: all .15s; }
   .btn-main { background: var(--green); color: #fff; }
   .btn-main:hover { background: var(--green-dk); }
-  .btn-sub { background: #eee9dc; color: var(--ink); }
-  .btn-sub:hover { background: #e2dcc9; }
-  .btn-copy { background: #b8862e; color: #fff; }
-  .btn-copy:hover { background: #9c7122; }
+  .btn-sub { background: #c08a93; color: #fff; }
+  .btn-sub:hover { background: #a97883; }
+  .btn-copy { background: #7e93b3; color: #fff; }
+  .btn-copy:hover { background: #6c83a4; }
   button.act:disabled { opacity: .45; cursor: not-allowed; }
 
   /* ---- 生成的报告（白纸效果） ---- */
@@ -143,7 +151,7 @@
   .empty { color: var(--sub); font-size: 14px; text-align: center; padding: 30px 0; }
 
   /* ---- 轻提示 toast ---- */
-  .toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: rgba(35,40,35,.85); color: #fff; padding: 10px 22px; border-radius: 22px; font-size: 14px; display: none; z-index: 120; }
+  .toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: rgba(107,100,96,.92); color: #fff; padding: 10px 22px; border-radius: 22px; font-size: 14px; display: none; z-index: 120; }
 </style>
 </head>
 <body>
@@ -155,9 +163,9 @@
 <!-- 顶部栏：标题 + 一键清空 + 历史记录 -->
 <div class="topbar">
   <div class="topbar-inner">
-    <h1>房源定价报告生成器</h1>
+    <h1>（@邹明煌）房源定价报告生成器</h1>
     <div>
-      <button class="btn-hist" onclick="clearAll()">一键清空</button>
+      <button class="btn-hist btn-clear" onclick="clearAll()">一键清空</button>
       <button class="btn-hist" onclick="toggleDrawer(true)">历史记录</button>
     </div>
   </div>
@@ -235,7 +243,7 @@
         <div class="card" data-panel="4" style="display:none">
           <h2>定价</h2>
           <div class="row">
-            <div class="field"><label>建议单价乘数</label><input id="multiplier" type="number" step="0.01" value="1.05">
+            <div class="field"><label>建议单价乘数</label><input id="multiplier" type="number" step="0.01" value="1.08">
               <div class="hint">常规房源建议 1.05-1.08</div>
             </div>
             <div class="field"><label>单价定位</label>
@@ -693,7 +701,7 @@ function loadRecord(id) {
   $('dealCount').value = d.dealCount ?? ''; $('dealMin').value = d.dealMin ?? ''; $('dealMax').value = d.dealMax ?? '';
   $('saleCount').value = d.saleCount ?? ''; $('saleMin').value = d.saleMin ?? ''; $('saleMax').value = d.saleMax ?? '';
   $('simCount').value = d.simCount ?? ''; $('simMin').value = d.simMin ?? ''; $('simMax').value = d.simMax ?? '';
-  $('multiplier').value = d.multiplier ?? 1.05; $('level').value = d.level || '中低位';
+  $('multiplier').value = d.multiplier ?? 1.08; $('level').value = d.level || '中低位';
   $('finalMin').value = d.finalMin ?? ''; $('finalMax').value = d.finalMax ?? '';
   $('evalOn').checked = !!d.evalOn;
   $('evalFactors').style.display = d.evalOn ? 'flex' : 'none';
@@ -735,7 +743,7 @@ function clearAll() {
   ['name', 'area', 'dealPeriod', 'dealCount', 'dealMin', 'dealMax',
    'saleCount', 'saleMin', 'saleMax', 'simCount', 'simMin', 'simMax',
    'finalMin', 'finalMax', 'dealPriceInput', 'listPriceInput'].forEach(id => $(id).value = '');
-  $('multiplier').value = 1.05;
+  $('multiplier').value = 1.08;
   $('level').value = '中低位';
   $('evalOn').checked = false;
   $('evalFactors').style.display = 'none';
